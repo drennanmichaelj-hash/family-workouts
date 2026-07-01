@@ -3,55 +3,9 @@ import { supabase } from '../supabaseClient'
 import { MOODS } from '../data/exercises'
 import ExerciseSelector from './ExerciseSelector'
 
-const TEMPLATES = [
-  {
-    name: 'Push Day',
-    exercises: [
-      { name: 'Bench Press', category: 'Barbell', sets: [{ reps: 8, weight: '' }, { reps: 8, weight: '' }, { reps: 8, weight: '' }] },
-      { name: 'Overhead Press', category: 'Barbell', sets: [{ reps: 8, weight: '' }, { reps: 8, weight: '' }, { reps: 8, weight: '' }] },
-      { name: 'Dumbbell Lateral Raise', category: 'Dumbbell', sets: [{ reps: 12, weight: '' }, { reps: 12, weight: '' }, { reps: 12, weight: '' }] },
-      { name: 'Cable Tricep Pushdown', category: 'Cable', sets: [{ reps: 12, weight: '' }, { reps: 12, weight: '' }, { reps: 12, weight: '' }] },
-    ]
-  },
-  {
-    name: 'Pull Day',
-    exercises: [
-      { name: 'Deadlift', category: 'Barbell', sets: [{ reps: 5, weight: '' }, { reps: 5, weight: '' }, { reps: 5, weight: '' }] },
-      { name: 'Barbell Row', category: 'Barbell', sets: [{ reps: 8, weight: '' }, { reps: 8, weight: '' }, { reps: 8, weight: '' }] },
-      { name: 'Lat Pulldown', category: 'Machine', sets: [{ reps: 10, weight: '' }, { reps: 10, weight: '' }, { reps: 10, weight: '' }] },
-      { name: 'Dumbbell Curl', category: 'Dumbbell', sets: [{ reps: 12, weight: '' }, { reps: 12, weight: '' }, { reps: 12, weight: '' }] },
-    ]
-  },
-  {
-    name: 'Leg Day',
-    exercises: [
-      { name: 'Back Squat', category: 'Barbell', sets: [{ reps: 5, weight: '' }, { reps: 5, weight: '' }, { reps: 5, weight: '' }] },
-      { name: 'Romanian Deadlift', category: 'Barbell', sets: [{ reps: 8, weight: '' }, { reps: 8, weight: '' }, { reps: 8, weight: '' }] },
-      { name: 'Leg Press', category: 'Machine', sets: [{ reps: 10, weight: '' }, { reps: 10, weight: '' }, { reps: 10, weight: '' }] },
-      { name: 'Leg Curl', category: 'Machine', sets: [{ reps: 12, weight: '' }, { reps: 12, weight: '' }, { reps: 12, weight: '' }] },
-    ]
-  },
-  {
-    name: 'Upper Body',
-    exercises: [
-      { name: 'Bench Press', category: 'Barbell', sets: [{ reps: 8, weight: '' }, { reps: 8, weight: '' }] },
-      { name: 'Barbell Row', category: 'Barbell', sets: [{ reps: 8, weight: '' }, { reps: 8, weight: '' }] },
-      { name: 'Overhead Press', category: 'Barbell', sets: [{ reps: 10, weight: '' }, { reps: 10, weight: '' }] },
-      { name: 'Pull-up', category: 'Bodyweight', sets: [{ reps: 8, weight: '' }, { reps: 8, weight: '' }] },
-    ]
-  },
-  {
-    name: 'Full Body',
-    exercises: [
-      { name: 'Back Squat', category: 'Barbell', sets: [{ reps: 5, weight: '' }, { reps: 5, weight: '' }, { reps: 5, weight: '' }] },
-      { name: 'Bench Press', category: 'Barbell', sets: [{ reps: 5, weight: '' }, { reps: 5, weight: '' }, { reps: 5, weight: '' }] },
-      { name: 'Barbell Row', category: 'Barbell', sets: [{ reps: 5, weight: '' }, { reps: 5, weight: '' }, { reps: 5, weight: '' }] },
-    ]
-  },
-]
-
-function newSet(isCardio = false) {
-  return isCardio ? { time: '', distance: '' } : { reps: '', weight: '' }
+function blankExercise(ex) {
+  const cardio = ex.category === 'Cardio'
+  return { ...ex, numSets: '', reps: '', weight: '', time: '', distance: '' }
 }
 
 export default function LogWorkout({ currentUser, onSave, prefill }) {
@@ -60,25 +14,26 @@ export default function LogWorkout({ currentUser, onSave, prefill }) {
   const [mood, setMood] = useState(prefill ? { emoji: prefill.mood_emoji, label: prefill.mood } : null)
   const [notes, setNotes] = useState(prefill?.notes || '')
   const [exercises, setExercises] = useState(
-    prefill?.exercises?.map(ex => ({ ...ex, sets: ex.sets?.map(s => ({ ...s })) || [newSet()] })) || []
+    prefill?.exercises?.map(ex => ({
+      name: ex.name,
+      category: ex.category,
+      numSets: ex.numSets || '',
+      reps: ex.reps || '',
+      weight: ex.weight || '',
+      time: ex.time || '',
+      distance: ex.distance || '',
+    })) || []
   )
   const [showExerciseSelector, setShowExerciseSelector] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [showTemplates, setShowTemplates] = useState(exercises.length === 0)
 
   const isCardio = (ex) => ex.category === 'Cardio'
 
-  function loadTemplate(template) {
-    setTitle(template.name)
-    setExercises(template.exercises.map(ex => ({
-      ...ex,
-      sets: ex.sets.map(s => ({ ...s }))
-    })))
-    setShowTemplates(false)
-  }
+  // Can save if there are exercises OR notes
+  const canSave = exercises.length > 0 || notes.trim().length > 0
 
   function addExercise(ex) {
-    setExercises(prev => [...prev, { ...ex, sets: [newSet(isCardio(ex))] }])
+    setExercises(prev => [...prev, blankExercise(ex)])
     setShowExerciseSelector(false)
   }
 
@@ -86,28 +41,12 @@ export default function LogWorkout({ currentUser, onSave, prefill }) {
     setExercises(prev => prev.filter((_, idx) => idx !== i))
   }
 
-  function addSet(exIdx) {
-    setExercises(prev => prev.map((ex, i) =>
-      i === exIdx ? { ...ex, sets: [...ex.sets, newSet(isCardio(ex))] } : ex
-    ))
-  }
-
-  function removeSet(exIdx, setIdx) {
-    setExercises(prev => prev.map((ex, i) =>
-      i === exIdx ? { ...ex, sets: ex.sets.filter((_, si) => si !== setIdx) } : ex
-    ))
-  }
-
-  function updateSet(exIdx, setIdx, field, value) {
-    setExercises(prev => prev.map((ex, i) =>
-      i === exIdx
-        ? { ...ex, sets: ex.sets.map((s, si) => si === setIdx ? { ...s, [field]: value } : s) }
-        : ex
-    ))
+  function updateExercise(i, field, value) {
+    setExercises(prev => prev.map((ex, idx) => idx === i ? { ...ex, [field]: value } : ex))
   }
 
   async function handleSave() {
-    if (exercises.length === 0) return
+    if (!canSave || saving) return
     setSaving(true)
 
     try {
@@ -140,40 +79,16 @@ export default function LogWorkout({ currentUser, onSave, prefill }) {
 
   return (
     <div className="pb-24">
-      {/* Templates */}
-      {showTemplates && (
-        <div className="mb-4">
-          <p className="text-sm font-semibold text-gray-500 mb-2 px-1">Start from a template</p>
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {TEMPLATES.map((t, i) => (
-              <button
-                key={i}
-                onClick={() => loadTemplate(t)}
-                className="flex-shrink-0 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-xl px-4 py-2 text-sm font-medium active:bg-indigo-100"
-              >
-                {t.name}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => setShowTemplates(false)}
-            className="text-xs text-gray-400 mt-1"
-          >
-            Skip template →
-          </button>
-        </div>
-      )}
-
       {/* Title */}
       <input
         type="text"
-        placeholder="Workout name (e.g. Push Day)"
+        placeholder="Workout name (optional)"
         value={title}
         onChange={e => setTitle(e.target.value)}
         className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-3"
       />
 
-      {/* Duration + Mood row */}
+      {/* Duration + Mood */}
       <div className="flex gap-2 mb-3">
         <div className="relative flex-1">
           <input
@@ -205,119 +120,106 @@ export default function LogWorkout({ currentUser, onSave, prefill }) {
 
       {/* Notes */}
       <textarea
-        placeholder="Notes (optional)"
+        placeholder="Notes — describe your workout, how you felt, anything. Exercises below are optional."
         value={notes}
         onChange={e => setNotes(e.target.value)}
-        rows={2}
+        rows={3}
         className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4 resize-none"
       />
 
       {/* Exercises */}
-      <div className="space-y-3 mb-4">
-        {exercises.map((ex, exIdx) => (
-          <div key={exIdx} className="bg-gray-50 rounded-xl p-3">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <p className="font-semibold text-sm text-gray-900">{ex.name}</p>
-                <p className="text-xs text-gray-400">{ex.category}</p>
+      {exercises.length > 0 && (
+        <div className="space-y-2 mb-3">
+          {exercises.map((ex, i) => (
+            <div key={i} className="bg-gray-50 rounded-xl p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="font-semibold text-sm text-gray-900">{ex.name}</p>
+                  <p className="text-xs text-gray-400">{ex.category}</p>
+                </div>
+                <button
+                  onClick={() => removeExercise(i)}
+                  className="text-gray-300 text-xl leading-none hover:text-red-400 px-1"
+                >
+                  &times;
+                </button>
               </div>
-              <button
-                onClick={() => removeExercise(exIdx)}
-                className="text-gray-300 text-xl leading-none hover:text-red-400"
-              >
-                &times;
-              </button>
-            </div>
 
-            {/* Set headers */}
-            <div className="grid grid-cols-3 text-xs text-gray-400 font-medium mb-1 px-1">
-              <span>Set</span>
               {isCardio(ex) ? (
-                <>
-                  <span>Time (min)</span>
-                  <span>Distance (mi)</span>
-                </>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      placeholder="—"
+                      value={ex.time}
+                      onChange={e => updateExercise(i, 'time', e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-center focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                    />
+                    <span className="absolute -bottom-4 left-0 right-0 text-center text-xs text-gray-400">min</span>
+                  </div>
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      placeholder="—"
+                      value={ex.distance}
+                      onChange={e => updateExercise(i, 'distance', e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-center focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                    />
+                    <span className="absolute -bottom-4 left-0 right-0 text-center text-xs text-gray-400">miles</span>
+                  </div>
+                </div>
               ) : (
-                <>
-                  <span>Reps</span>
-                  <span>Weight (lbs)</span>
-                </>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      placeholder="—"
+                      value={ex.numSets}
+                      onChange={e => updateExercise(i, 'numSets', e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-center focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                    />
+                    <span className="absolute -bottom-4 left-0 right-0 text-center text-xs text-gray-400">sets</span>
+                  </div>
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      placeholder="—"
+                      value={ex.reps}
+                      onChange={e => updateExercise(i, 'reps', e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-center focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                    />
+                    <span className="absolute -bottom-4 left-0 right-0 text-center text-xs text-gray-400">reps</span>
+                  </div>
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      placeholder="—"
+                      value={ex.weight}
+                      onChange={e => updateExercise(i, 'weight', e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-center focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                    />
+                    <span className="absolute -bottom-4 left-0 right-0 text-center text-xs text-gray-400">lbs</span>
+                  </div>
+                </div>
               )}
+              <div className="mt-5" />
             </div>
-
-            {ex.sets.map((set, setIdx) => (
-              <div key={setIdx} className="grid grid-cols-3 gap-2 mb-1 items-center">
-                <span className="text-xs text-gray-500 font-medium px-1">{setIdx + 1}</span>
-                {isCardio(ex) ? (
-                  <>
-                    <input
-                      type="number"
-                      placeholder="—"
-                      value={set.time}
-                      onChange={e => updateSet(exIdx, setIdx, 'time', e.target.value)}
-                      className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
-                    />
-                    <div className="flex gap-1">
-                      <input
-                        type="number"
-                        placeholder="—"
-                        value={set.distance}
-                        onChange={e => updateSet(exIdx, setIdx, 'distance', e.target.value)}
-                        className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white flex-1"
-                      />
-                      {ex.sets.length > 1 && (
-                        <button onClick={() => removeSet(exIdx, setIdx)} className="text-gray-300 text-base hover:text-red-400">×</button>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <input
-                      type="number"
-                      placeholder="—"
-                      value={set.reps}
-                      onChange={e => updateSet(exIdx, setIdx, 'reps', e.target.value)}
-                      className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
-                    />
-                    <div className="flex gap-1">
-                      <input
-                        type="number"
-                        placeholder="—"
-                        value={set.weight}
-                        onChange={e => updateSet(exIdx, setIdx, 'weight', e.target.value)}
-                        className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white flex-1"
-                      />
-                      {ex.sets.length > 1 && (
-                        <button onClick={() => removeSet(exIdx, setIdx)} className="text-gray-300 text-base hover:text-red-400">×</button>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
-
-            <button
-              onClick={() => addSet(exIdx)}
-              className="text-xs text-indigo-600 font-medium mt-1 px-1"
-            >
-              + Add set
-            </button>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Add exercise button */}
       <button
         onClick={() => setShowExerciseSelector(true)}
         className="w-full border-2 border-dashed border-gray-200 rounded-xl py-3 text-sm text-gray-400 font-medium hover:border-indigo-300 hover:text-indigo-500 transition-all mb-4"
       >
-        + Add Exercise
+        + Add Exercise (optional)
       </button>
 
       {/* Save */}
       <button
         onClick={handleSave}
-        disabled={exercises.length === 0 || saving}
+        disabled={!canSave || saving}
         className="w-full bg-indigo-600 text-white rounded-xl py-3.5 font-bold text-base disabled:opacity-40 active:bg-indigo-700"
       >
         {saving ? 'Saving...' : '💪 Share Workout'}

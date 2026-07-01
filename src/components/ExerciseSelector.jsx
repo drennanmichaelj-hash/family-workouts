@@ -16,7 +16,7 @@ export default function ExerciseSelector({ onSelect, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
-      <div className="bg-white w-full rounded-t-2xl max-h-[85vh] flex flex-col">
+      <div className="bg-white w-full rounded-t-2xl max-h-[92vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
           <h2 className="font-bold text-gray-900">Add Exercise</h2>
@@ -36,7 +36,7 @@ export default function ExerciseSelector({ onSelect, onClose }) {
         </div>
 
         {/* Category pills */}
-        <div className="px-4 pb-2 flex gap-2 overflow-x-auto scrollbar-hide">
+        <div className="px-4 pb-3 flex gap-2 overflow-x-auto overflow-y-hidden" style={{ WebkitOverflowScrolling: 'touch', flexShrink: 0 }}>
           {categories.map(cat => (
             <button
               key={cat}

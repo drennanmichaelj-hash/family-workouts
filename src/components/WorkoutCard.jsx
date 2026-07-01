@@ -121,20 +121,26 @@ export default function WorkoutCard({ workout, currentUser, onCopy }) {
       {workout.exercises && workout.exercises.length > 0 && (
         <div className="mx-4 mb-3 bg-gray-50 rounded-xl p-3 space-y-2">
           {workout.exercises.map((ex, i) => (
-            <div key={i} className="flex items-start justify-between gap-2">
+            <div key={i} className="flex items-center justify-between gap-2">
               <div>
                 <p className="text-sm font-medium text-gray-800">{ex.name}</p>
                 <p className="text-xs text-gray-400">{ex.category}</p>
               </div>
-              <div className="text-right flex-shrink-0">
-                {ex.sets && ex.sets.map((set, si) => (
-                  <p key={si} className="text-xs text-gray-600">
-                    {set.reps && `${set.reps} reps`}
-                    {set.weight && ` × ${set.weight} lbs`}
-                    {set.distance && ` ${set.distance} mi`}
-                    {set.time && ` ${set.time} min`}
-                  </p>
-                ))}
+              <div className="text-right flex-shrink-0 text-xs text-gray-600">
+                {ex.category === 'Cardio' ? (
+                  <span>
+                    {ex.time && `${ex.time} min`}
+                    {ex.time && ex.distance && ' · '}
+                    {ex.distance && `${ex.distance} mi`}
+                  </span>
+                ) : (
+                  <span>
+                    {ex.numSets && `${ex.numSets} sets`}
+                    {ex.numSets && ex.reps && ' × '}
+                    {ex.reps && `${ex.reps} reps`}
+                    {ex.weight && ` × ${ex.weight} lbs`}
+                  </span>
+                )}
               </div>
             </div>
           ))}
